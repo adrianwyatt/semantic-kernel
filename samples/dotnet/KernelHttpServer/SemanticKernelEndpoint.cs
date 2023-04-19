@@ -105,31 +105,31 @@ public class SemanticKernelEndpoint
 
         var iterations = 1;
 
-        while (!result.Variables.ToPlan().IsComplete &&
-               result.Variables.ToPlan().IsSuccessful &&
-               iterations < maxSteps)
+        Plan? plan = null;
+        while (
+            !result.ErrorOccurred &&
+            result.TryGetPlan(out plan) &&
+            plan.HasNextStep &&
+            iterations < maxSteps)
         {
             result = await kernel.RunAsync(result.Variables, planner);
             iterations++;
         }
 
-        if (result.ErrorOccurred)
+        if (result.ErrorOccurred || plan == null)
         {
             return await ResponseErrorWithMessageAsync(req, result);
         }
 
         var r = req.CreateResponse(HttpStatusCode.OK);
-        await r.WriteAsJsonAsync(new AskResult { Value = result.Variables.ToPlan().Result });
+        await r.WriteAsJsonAsync(new AskResult { Value = plan.State.ToString() });
         return r;
     }
 
     private static async Task<HttpResponseData> ResponseErrorWithMessageAsync(HttpRequestData req, SKContext result)
     {
-        if (result.LastException is AIException aiException && aiException.Detail is not null)
-        {
-            return await req.CreateResponseWithMessageAsync(HttpStatusCode.BadRequest, string.Concat(aiException.Message, " - Detail: " + aiException.Detail));
-        }
-
-        return await req.CreateResponseWithMessageAsync(HttpStatusCode.BadRequest, result.LastErrorDescription);
+        return result.LastException is AIException aiException && aiException.Detail is not null
+            ? await req.CreateResponseWithMessageAsync(HttpStatusCode.BadRequest, string.Concat(aiException.Message, " - Detail: " + aiException.Detail))
+            : await req.CreateResponseWithMessageAsync(HttpStatusCode.BadRequest, result.LastErrorDescription);
     }
 }
