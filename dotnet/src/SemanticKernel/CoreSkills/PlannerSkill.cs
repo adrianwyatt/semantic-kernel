@@ -6,9 +6,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.Orchestration;
-using Microsoft.SemanticKernel.Planning;
+using Microsoft.SemanticKernel.Orchestration.Extensions;
+using Microsoft.SemanticKernel.Planning.Planners;
 using Microsoft.SemanticKernel.SkillDefinition;
-using Microsoft.SemanticKernel.Text;
 
 namespace Microsoft.SemanticKernel.CoreSkills;
 
@@ -62,37 +62,6 @@ public class PlannerSkill
         /// The list of functions to include in the plan creation request.
         /// </summary>
         public const string IncludedFunctions = "includedFunctions";
-
-        /// <summary>
-        /// Whether to use conditional capabilities when creating plans.
-        /// </summary>
-        public const string UseConditionals = "useConditionals";
-    }
-
-    internal sealed class PlannerSkillConfig
-    {
-        // Depending on the embeddings engine used, the user ask,
-        // and the functions available, this value may need to be adjusted.
-        // For default, this is set to null to exhibit previous behavior.
-        public double? RelevancyThreshold { get; set; }
-
-        // Limits the number of relevant functions as result of semantic
-        // search included in the plan creation request.
-        // <see cref="Parameters.IncludedFunctions"/> will be included
-        // in the plan regardless of this limit.
-        public int MaxRelevantFunctions { get; set; } = 100;
-
-        // A list of skills to exclude from the plan creation request.
-        public HashSet<string> ExcludedSkills { get; } = new() { RestrictedSkillName };
-
-        // A list of functions to exclude from the plan creation request.
-        public HashSet<string> ExcludedFunctions { get; } = new() { "CreatePlan", "ExecutePlan" };
-
-        // A list of functions to include in the plan creation request.
-        public HashSet<string> IncludedFunctions { get; } = new() { "BucketOutputs" };
-
-        // Whether to use conditional capabilities when creating plans.
-        public bool UseConditionals { get; set; } = false;
     }
 
     /// <summary>
@@ -101,24 +70,14 @@ public class PlannerSkill
     private const string RestrictedSkillName = "PlannerSkill_Excluded";
 
     /// <summary>
-    /// the function flow runner, which executes plans that leverage functions
-    /// </summary>
-    private readonly FunctionFlowRunner _functionFlowRunner;
-
-    /// <summary>
     /// the bucket semantic function, which takes a list of items and buckets them into a number of buckets
     /// </summary>
     private readonly ISKFunction _bucketFunction;
 
     /// <summary>
-    /// the function flow semantic function, which takes a goal and creates an xml plan that can be executed
+    /// the kernel to use
     /// </summary>
-    private readonly ISKFunction _functionFlowFunction;
-
-    /// <summary>
-    /// the conditional function flow semantic function, which takes a goal and creates an xml plan that can be executed
-    /// </summary>
-    private readonly ISKFunction _conditionalFunctionFlowFunction;
+    private readonly IKernel _kernel;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlannerSkill"/> class.
@@ -127,49 +86,14 @@ public class PlannerSkill
     /// <param name="maxTokens"> The maximum number of tokens to use for the semantic functions </param>
     public PlannerSkill(IKernel kernel, int maxTokens = 1024)
     {
-        this._functionFlowRunner = new(kernel);
+        this._kernel = kernel;
 
+        // TODO Remove this.
         this._bucketFunction = kernel.CreateSemanticFunction(
             promptTemplate: SemanticFunctionConstants.BucketFunctionDefinition,
             skillName: RestrictedSkillName,
             maxTokens: maxTokens,
             temperature: 0.0);
-
-        this._functionFlowFunction = kernel.CreateSemanticFunction(
-            promptTemplate: SemanticFunctionConstants.FunctionFlowFunctionDefinition,
-            skillName: RestrictedSkillName,
-            description: "Given a request or command or goal generate a step by step plan to " +
-                         "fulfill the request using functions. This ability is also known as decision making and function flow",
-            maxTokens: maxTokens,
-            temperature: 0.0,
-            stopSequences: new[] { "<!--" });
-
-        this._conditionalFunctionFlowFunction = kernel.CreateSemanticFunction(
-            promptTemplate: SemanticFunctionConstants.ConditionalFunctionFlowFunctionDefinition,
-            skillName: RestrictedSkillName,
-            description: "Given a request or command or goal generate a step by step plan to " +
-                         "fulfill the request using functions. This ability is also known as decision making and function flow. Uses conditional capabilities",
-            maxTokens: maxTokens,
-            temperature: 0.0,
-            stopSequences: new[] { "<!--" });
-
-        // Currently not exposed -- experimental.
-        _ = kernel.CreateSemanticFunction(
-            SemanticFunctionConstants.ProblemSolverFunctionDefinition,
-            skillName: RestrictedSkillName,
-            description: "Given a request or command or goal generate a step by step plan to fulfill the request. " +
-                         "This ability is also known as decision making and problem solving",
-            maxTokens: maxTokens,
-            temperature: 0.0,
-            stopSequences: new[] { "<!--" });
-
-        _ = kernel.CreateSemanticFunction(
-            SemanticFunctionConstants.SolveNextStepFunctionDefinition,
-            skillName: RestrictedSkillName,
-            description: "Given a plan with a goal, take the first step and execute it",
-            maxTokens: maxTokens,
-            temperature: 0.0,
-            stopSequences: new[] { "<!-- END -->", "<!--" });
     }
 
     /// <summary>
@@ -255,27 +179,14 @@ public class PlannerSkill
         DefaultValue = "")]
     [SKFunctionContextParameter(Name = Parameters.IncludedFunctions, Description = "A list of functions to include in the plan creation request.",
         DefaultValue = "")]
-    [SKFunctionContextParameter(Name = Parameters.UseConditionals, Description = "Use conditional functions to create the plan.",
-        DefaultValue = "False")]
     public async Task<SKContext> CreatePlanAsync(string goal, SKContext context)
     {
-        PlannerSkillConfig config = context.GetPlannerSkillConfig();
+        PlannerConfig config = context.GetPlannerConfig();
 
-        string relevantFunctionsManual = await context.GetFunctionsManualAsync(goal, config);
-        context.Variables.Set("available_functions", relevantFunctionsManual);
-        // TODO - consider adding the relevancy score for functions added to manual
+        var planner = new FunctionFlowPlanner(this._kernel, config);
+        var plan = await planner.CreatePlanAsync(goal);
 
-        var plan = config.UseConditionals
-            ? await this._conditionalFunctionFlowFunction.InvokeAsync(context)
-            : await this._functionFlowFunction.InvokeAsync(context);
-
-        string fullPlan = $"<{FunctionFlowRunner.GoalTag}>\n{goal}\n</{FunctionFlowRunner.GoalTag}>\n{plan.ToString().Trim()}";
-        _ = context.Variables.UpdateWithPlanEntry(new SkillPlan
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            Goal = goal,
-            PlanString = fullPlan,
-        });
+        _ = context.Variables.UpdateWithPlanEntry(plan);
 
         return context;
     }
@@ -292,78 +203,14 @@ public class PlannerSkill
     [SKFunctionName("ExecutePlan")]
     public async Task<SKContext> ExecutePlanAsync(SKContext context)
     {
-        var planToExecute = context.Variables.ToPlan();
-        try
+        if (context.TryGetPlan(out var plan))
         {
-            var executeResultContext = await this._functionFlowRunner.ExecuteXmlPlanAsync(context, planToExecute.PlanString);
-            _ = executeResultContext.Variables.Get(SkillPlan.PlanKey, out var planProgress);
-            _ = executeResultContext.Variables.Get(SkillPlan.ResultKey, out var results);
-
-            var isComplete = planProgress.ContainsEx($"<{FunctionFlowRunner.PlanTag}>", StringComparison.InvariantCultureIgnoreCase) &&
-                             !planProgress.ContainsEx($"<{FunctionFlowRunner.FunctionTag}", StringComparison.InvariantCultureIgnoreCase);
-            var isSuccessful = !executeResultContext.ErrorOccurred &&
-                               planProgress.ContainsEx($"<{FunctionFlowRunner.PlanTag}>", StringComparison.InvariantCultureIgnoreCase);
-
-            if (string.IsNullOrEmpty(results) && isComplete && isSuccessful)
-            {
-                results = executeResultContext.Variables.ToString();
-            }
-            else if (executeResultContext.ErrorOccurred)
-            {
-                results = executeResultContext.LastErrorDescription;
-            }
-
-            _ = context.Variables.UpdateWithPlanEntry(new SkillPlan
-            {
-                Id = planToExecute.Id,
-                Goal = planToExecute.Goal,
-                PlanString = planProgress,
-                IsComplete = isComplete,
-                IsSuccessful = isSuccessful,
-                Result = results,
-            });
-
-            return context;
+            plan = await this._kernel.StepAsync(context.Variables, plan);
+            _ = context.Variables.UpdateWithPlanEntry(plan);
         }
-        catch (PlanningException e)
+        else
         {
-            switch (e.ErrorCode)
-            {
-                case PlanningException.ErrorCodes.InvalidPlan:
-                    context.Log.LogWarning("[InvalidPlan] Error executing plan: {0} ({1})", e.Message, e.GetType().Name);
-                    _ = context.Variables.UpdateWithPlanEntry(new SkillPlan
-                    {
-                        Id = Guid.NewGuid().ToString("N"),
-                        Goal = planToExecute.Goal,
-                        PlanString = planToExecute.PlanString,
-                        IsComplete = true, // Plan was invalid, mark complete so it's not attempted further.
-                        IsSuccessful = false,
-                        Result = e.Message,
-                    });
-
-                    return context;
-                case PlanningException.ErrorCodes.UnknownError:
-                case PlanningException.ErrorCodes.InvalidConfiguration:
-                    context.Log.LogWarning("[UnknownError] Error executing plan: {0} ({1})", e.Message, e.GetType().Name);
-                    break;
-                default:
-                    throw;
-            }
-        }
-        catch (Exception e) when (!e.IsCriticalException())
-        {
-            context.Log.LogWarning("Error executing plan: {0} ({1})", e.Message, e.GetType().Name);
-            _ = context.Variables.UpdateWithPlanEntry(new SkillPlan
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                Goal = planToExecute.Goal,
-                PlanString = planToExecute.PlanString,
-                IsComplete = false,
-                IsSuccessful = false,
-                Result = e.Message,
-            });
-
-            return context;
+            context.Fail("No plan found in context.");
         }
 
         return context;
