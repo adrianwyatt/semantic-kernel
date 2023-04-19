@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Orchestration;
+using Microsoft.SemanticKernel.Planning.Planners;
 using Microsoft.SemanticKernel.SkillDefinition;
 using Moq;
 using SemanticKernel.UnitTests.XunitHelpers;
@@ -35,7 +36,7 @@ public class SKContextExtensionsTests
 
         // Arrange GetAvailableFunctionsAsync parameters
         var context = new SKContext(variables, memory.Object, skills.ReadOnlySkillCollection, logger, cancellationToken);
-        var config = new PlannerSkillConfig();
+        var config = new PlannerConfig();
         var semanticQuery = "test";
 
         // Act
@@ -86,7 +87,7 @@ public class SKContextExtensionsTests
 
         // Arrange GetAvailableFunctionsAsync parameters
         var context = new SKContext(variables, memory.Object, skills.Object, logger, cancellationToken);
-        var config = new PlannerSkillConfig();
+        var config = new PlannerConfig();
         var semanticQuery = "test";
 
         // Act
@@ -149,7 +150,7 @@ public class SKContextExtensionsTests
 
         // Arrange GetAvailableFunctionsAsync parameters
         var context = new SKContext(variables, memory.Object, skills.Object, logger, cancellationToken);
-        var config = new PlannerSkillConfig() { RelevancyThreshold = 0.78 };
+        var config = new PlannerConfig() { RelevancyThreshold = 0.78 };
         var semanticQuery = "test";
 
         // Act
@@ -173,9 +174,9 @@ public class SKContextExtensionsTests
         Assert.Equal(nativeFunctionView, result[1]);
     }
 
-    // Tests for GetPlannerSkillConfig
+    // Tests for GetPlannerConfig
     [Fact]
-    public void CanCallGetPlannerSkillConfig()
+    public void CanCallGetPlannerConfig()
     {
         // Arrange
         var variables = new ContextVariables();
@@ -183,11 +184,11 @@ public class SKContextExtensionsTests
         var cancellationToken = default(CancellationToken);
         var memory = new Mock<ISemanticTextMemory>();
         var skills = new Mock<ISkillCollection>();
-        var expectedDefault = new PlannerSkillConfig();
+        var expectedDefault = new PlannerConfig();
 
         // Act
         var context = new SKContext(variables, memory.Object, skills.Object, logger, cancellationToken);
-        var config = context.GetPlannerSkillConfig();
+        var config = context.GetPlannerConfig();
 
         // Assert
         Assert.NotNull(config);
@@ -199,7 +200,7 @@ public class SKContextExtensionsTests
     }
 
     [Fact]
-    public void CanCallGetPlannerSkillConfigWithExcludedFunctions()
+    public void CanCallGetPlannerConfigWithExcludedFunctions()
     {
         // Arrange
         var variables = new ContextVariables();
@@ -207,13 +208,13 @@ public class SKContextExtensionsTests
         var cancellationToken = default(CancellationToken);
         var memory = new Mock<ISemanticTextMemory>();
         var skills = new Mock<ISkillCollection>();
-        var expectedDefault = new PlannerSkillConfig();
+        var expectedDefault = new PlannerConfig();
         var excludedFunctions = "test1,test2,test3";
 
         // Act
         variables.Set(Parameters.ExcludedFunctions, excludedFunctions);
         var context = new SKContext(variables, memory.Object, skills.Object, logger, cancellationToken);
-        var config = context.GetPlannerSkillConfig();
+        var config = context.GetPlannerConfig();
 
         // Assert
         Assert.NotNull(config);
@@ -225,7 +226,7 @@ public class SKContextExtensionsTests
     }
 
     [Fact]
-    public void CanCallGetPlannerSkillConfigWithIncludedFunctions()
+    public void CanCallGetPlannerConfigWithIncludedFunctions()
     {
         // Arrange
         var variables = new ContextVariables();
@@ -233,13 +234,13 @@ public class SKContextExtensionsTests
         var cancellationToken = default(CancellationToken);
         var memory = new Mock<ISemanticTextMemory>();
         var skills = new Mock<ISkillCollection>();
-        var expectedDefault = new PlannerSkillConfig();
+        var expectedDefault = new PlannerConfig();
         var includedFunctions = "test1,CreatePlan";
 
         // Act
         variables.Set(Parameters.IncludedFunctions, includedFunctions);
         var context = new SKContext(variables, memory.Object, skills.Object, logger, cancellationToken);
-        var config = context.GetPlannerSkillConfig();
+        var config = context.GetPlannerConfig();
 
         // Assert
         Assert.NotNull(config);
@@ -247,11 +248,13 @@ public class SKContextExtensionsTests
         Assert.Equal(expectedDefault.MaxRelevantFunctions, config.MaxRelevantFunctions);
         Assert.Equal(expectedDefault.ExcludedSkills, config.ExcludedSkills);
         Assert.Equal(expectedDefault.ExcludedFunctions, config.ExcludedFunctions);
-        Assert.Equal(expectedDefault.IncludedFunctions.Union(new HashSet<string> { "test1" }), config.IncludedFunctions);
+
+        // TODO How was this passing before???
+        Assert.Equal(expectedDefault.IncludedFunctions.Union(new HashSet<string> { "test1", "CreatePlan" }), config.IncludedFunctions);
     }
 
     [Fact]
-    public void CanCallGetPlannerSkillConfigWithRelevancyThreshold()
+    public void CanCallGetPlannerConfigWithRelevancyThreshold()
     {
         // Arrange
         var variables = new ContextVariables();
@@ -259,12 +262,12 @@ public class SKContextExtensionsTests
         var cancellationToken = default(CancellationToken);
         var memory = new Mock<ISemanticTextMemory>();
         var skills = new Mock<ISkillCollection>();
-        var expectedDefault = new PlannerSkillConfig();
+        var expectedDefault = new PlannerConfig();
 
         // Act
         variables.Set(Parameters.RelevancyThreshold, "0.78");
         var context = new SKContext(variables, memory.Object, skills.Object, logger, cancellationToken);
-        var config = context.GetPlannerSkillConfig();
+        var config = context.GetPlannerConfig();
 
         // Assert
         Assert.NotNull(config);
@@ -276,7 +279,7 @@ public class SKContextExtensionsTests
     }
 
     [Fact]
-    public void CanCallGetPlannerSkillConfigWithMaxRelevantFunctions()
+    public void CanCallGetPlannerConfigWithMaxRelevantFunctions()
     {
         // Arrange
         var variables = new ContextVariables();
@@ -284,12 +287,12 @@ public class SKContextExtensionsTests
         var cancellationToken = default(CancellationToken);
         var memory = new Mock<ISemanticTextMemory>();
         var skills = new Mock<ISkillCollection>();
-        var expectedDefault = new PlannerSkillConfig();
+        var expectedDefault = new PlannerConfig();
 
         // Act
         variables.Set(Parameters.MaxRelevantFunctions, "5");
         var context = new SKContext(variables, memory.Object, skills.Object, logger, cancellationToken);
-        var config = context.GetPlannerSkillConfig();
+        var config = context.GetPlannerConfig();
 
         // Assert
         Assert.NotNull(config);
@@ -301,7 +304,7 @@ public class SKContextExtensionsTests
     }
 
     [Fact]
-    public void CanCallGetPlannerSkillConfigWithExcludedSkills()
+    public void CanCallGetPlannerConfigWithExcludedSkills()
     {
         // Arrange
         var variables = new ContextVariables();
@@ -309,13 +312,13 @@ public class SKContextExtensionsTests
         var cancellationToken = default(CancellationToken);
         var memory = new Mock<ISemanticTextMemory>();
         var skills = new Mock<ISkillCollection>();
-        var expectedDefault = new PlannerSkillConfig();
+        var expectedDefault = new PlannerConfig();
         var excludedSkills = "test1,test2,test3";
 
         // Act
         variables.Set(Parameters.ExcludedSkills, excludedSkills);
         var context = new SKContext(variables, memory.Object, skills.Object, logger, cancellationToken);
-        var config = context.GetPlannerSkillConfig();
+        var config = context.GetPlannerConfig();
 
         // Assert
         Assert.NotNull(config);
@@ -345,7 +348,7 @@ public class SKContextExtensionsTests
 
         // Arrange GetAvailableFunctionsAsync parameters
         var context = new SKContext(variables, memory.Object, skills.ReadOnlySkillCollection, logger, cancellationToken);
-        var config = new PlannerSkillConfig() { RelevancyThreshold = 0.78 };
+        var config = new PlannerConfig() { RelevancyThreshold = 0.78 };
         var semanticQuery = "test";
 
         // Act
