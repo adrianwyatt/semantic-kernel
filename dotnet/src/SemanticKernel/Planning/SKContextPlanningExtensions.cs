@@ -1,11 +1,14 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.Memory;
+using Microsoft.SemanticKernel.Planning.Planners;
 using Microsoft.SemanticKernel.SkillDefinition;
 using static Microsoft.SemanticKernel.CoreSkills.PlannerSkill;
 
@@ -14,7 +17,7 @@ using static Microsoft.SemanticKernel.CoreSkills.PlannerSkill;
 namespace Microsoft.SemanticKernel.Orchestration;
 #pragma warning restore IDE0130
 
-internal static class SKContextPlanningExtensions
+public static class SKContextPlanningExtensions
 {
     internal const string PlannerMemoryCollectionName = "Planning.SKFunctionsManual";
 
@@ -27,12 +30,12 @@ internal static class SKContextPlanningExtensions
     /// <param name="semanticQuery">The semantic query for finding relevant registered functions</param>
     /// <param name="config">The planner skill config.</param>
     /// <returns>A string containing the manual for all available functions.</returns>
-    internal static async Task<string> GetFunctionsManualAsync(
+    public static async Task<string> GetFunctionsManualAsync(
         this SKContext context,
         string? semanticQuery = null,
-        PlannerSkillConfig? config = null)
+        PlannerConfig? config = null)
     {
-        config ??= new PlannerSkillConfig();
+        config ??= new PlannerConfig();
         var functions = await context.GetAvailableFunctionsAsync(config, semanticQuery);
 
         return string.Join("\n\n", functions.Select(x => x.ToManualString()));
@@ -42,12 +45,12 @@ internal static class SKContextPlanningExtensions
     /// Returns a list of functions that are available to the user based on the semantic query and the excluded skills and functions.
     /// </summary>
     /// <param name="context">The SKContext</param>
-    /// <param name="config">The planner skill config.</param>
+    /// <param name="config">The planner config.</param>
     /// <param name="semanticQuery">The semantic query for finding relevant registered functions</param>
     /// <returns>A list of functions that are available to the user based on the semantic query and the excluded skills and functions.</returns>
-    internal static async Task<IOrderedEnumerable<FunctionView>> GetAvailableFunctionsAsync(
+    public static async Task<IOrderedEnumerable<FunctionView>> GetAvailableFunctionsAsync(
         this SKContext context,
-        PlannerSkillConfig config,
+        PlannerConfig config,
         string? semanticQuery = null)
     {
         var excludedSkills = config.ExcludedSkills ?? new();
@@ -79,9 +82,9 @@ internal static class SKContextPlanningExtensions
             await RememberFunctionsAsync(context, availableFunctions);
 
             // Search for functions that match the semantic query.
-            var memories = context.Memory.SearchAsync(collection: PlannerMemoryCollectionName, query: semanticQuery!, limit: config.MaxRelevantFunctions,
-                minRelevanceScore: config.RelevancyThreshold.Value, withEmbeddings: false,
-                cancel: context.CancellationToken);
+            var memories = context.Memory.SearchAsync(PlannerMemoryCollectionName, semanticQuery!, config.MaxRelevantFunctions, config.RelevancyThreshold.Value,
+                false,
+                context.CancellationToken);
 
             // Add functions that were found in the search results.
             result.AddRange(await GetRelevantFunctionsAsync(context, availableFunctions, memories));
@@ -99,7 +102,7 @@ internal static class SKContextPlanningExtensions
             .ThenBy(x => x.Name);
     }
 
-    internal static async Task<IEnumerable<FunctionView>> GetRelevantFunctionsAsync(SKContext context, IEnumerable<FunctionView> availableFunctions,
+    public static async Task<IEnumerable<FunctionView>> GetRelevantFunctionsAsync(SKContext context, IEnumerable<FunctionView> availableFunctions,
         IAsyncEnumerable<MemoryQueryResult> memories)
     {
         var relevantFunctions = new ConcurrentBag<FunctionView>();
@@ -159,9 +162,9 @@ internal static class SKContextPlanningExtensions
     /// </summary>
     /// <param name="context">The SKContext to get the planner skill config from.</param>
     /// <returns>The planner skill config.</returns>
-    internal static PlannerSkillConfig GetPlannerSkillConfig(this SKContext context)
+    internal static PlannerConfig GetPlannerConfig(this SKContext context)
     {
-        var config = new PlannerSkillConfig();
+        var config = new PlannerConfig();
 
         if (context.Variables.Get(Parameters.RelevancyThreshold, out var threshold) && double.TryParse(threshold, out var parsedValue))
         {
@@ -199,11 +202,38 @@ internal static class SKContextPlanningExtensions
             config.IncludedFunctions.ExceptWith(config.ExcludedFunctions);
         }
 
-        if (context.Variables.Get(Parameters.UseConditionals, out var useConditionals) && bool.TryParse(useConditionals, out var parsedUseConditionals))
+        return config;
+    }
+
+    /// <summary>
+    /// Gets the plan from the SKContext.
+    /// </summary>
+    /// <param name="context">The SKContext to get the plan from.</param>
+    /// <param name="plan">The plan.</param>
+    /// <returns>True if the plan was successfully retrieved, false otherwise.</returns>
+    public static bool TryGetPlan(this SKContext context, out Plan plan)
+    {
+        try
         {
-            config.UseConditionals = parsedUseConditionals;
+            if (context.Variables.Get(Plan.PlanKey, out string planString))
+            {
+                plan = Plan.FromJson(planString, context);
+                return true;
+            }
+            else
+            {
+                plan = Plan.FromJson(context.Variables.Input, context);
+                return true;
+            }
+        }
+        catch (ArgumentNullException)
+        {
+        }
+        catch (JsonException)
+        {
         }
 
-        return config;
+        plan = new Plan(string.Empty);
+        return false;
     }
 }
