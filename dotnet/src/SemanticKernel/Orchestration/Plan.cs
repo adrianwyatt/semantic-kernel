@@ -156,17 +156,19 @@ public sealed class Plan : ISKFunction
     /// <param name="name">The name of the plan.</param>
     /// <param name="skillName">The name of the skill.</param>
     /// <param name="description">The description of the plan.</param>
+    /// <param name="nextStepIndex">The index of the next step.</param>
     /// <param name="state">The state of the plan.</param>
     /// <param name="namedParameters">The named parameters of the plan.</param>
     /// <param name="namedOutputs">The named outputs of the plan.</param>
     /// <param name="steps">The steps of the plan.</param>
     [JsonConstructor]
-    public Plan(string name, string skillName, string description, ContextVariables state, ContextVariables namedParameters, ContextVariables namedOutputs,
+    public Plan(string name, string skillName, string description, int nextStepIndex, ContextVariables state, ContextVariables namedParameters, ContextVariables namedOutputs,
         IReadOnlyList<Plan> steps)
     {
         this.Name = name;
         this.SkillName = skillName;
         this.Description = description;
+        this.NextStepIndex = nextStepIndex;
         this.State = state;
         this.NamedParameters = namedParameters;
         this.NamedOutputs = namedOutputs;

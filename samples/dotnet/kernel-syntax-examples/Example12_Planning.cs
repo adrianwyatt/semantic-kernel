@@ -20,6 +20,7 @@ internal static class Example12_Planning
     public static async Task RunAsync()
     {
         await PoetrySamplesAsync();
+        await PoetrySkillSamplesAsync();
         await EmailSamplesAsync();
         await BookSamplesAsync();
         await MemorySampleAsync();
@@ -57,6 +58,33 @@ internal static class Example12_Planning
     private static async Task PoetrySamplesAsync()
     {
         Console.WriteLine("======== Planning - Create and Execute Poetry Plan ========");
+        var kernel = new KernelBuilder().WithLogger(ConsoleLogger.Log).Build();
+        kernel.Config.AddAzureTextCompletionService(
+            Env.Var("AZURE_OPENAI_SERVICE_ID"),
+            Env.Var("AZURE_OPENAI_DEPLOYMENT_NAME"),
+            Env.Var("AZURE_OPENAI_ENDPOINT"),
+            Env.Var("AZURE_OPENAI_KEY"));
+
+        string folder = RepoFiles.SampleSkillsPath();
+        kernel.ImportSemanticSkillFromDirectory(folder, "SummarizeSkill");
+        kernel.ImportSemanticSkillFromDirectory(folder, "WriterSkill");
+
+        var planner = new FunctionFlowPlanner(kernel);
+
+        var planObject = await planner.CreatePlanAsync("Write a poem about John Doe, then translate it into Italian.");
+
+        Console.WriteLine("Original plan:");
+        Console.WriteLine(planObject.ToJson());
+
+        var result = await kernel.RunAsync(planObject);
+
+        Console.WriteLine("Result:");
+        Console.WriteLine(result.Result);
+    }
+
+    private static async Task PoetrySkillSamplesAsync()
+    {
+        Console.WriteLine("======== PlannerSkill - Create and Execute Poetry Plan ========");
         var kernel = InitializeKernelAndPlanner(out var planner);
 
         // Load additional skills to enable planner to do non-trivial asks.
@@ -75,7 +103,7 @@ internal static class Example12_Planning
 
         Console.WriteLine("Original plan:");
         originalPlan.TryGetPlan(out Plan? plan);
-        Console.WriteLine(plan);
+        Console.WriteLine(plan.ToJson());
 
         await ExecutePlanAsync(kernel, planner, originalPlan, 5);
     }
@@ -104,7 +132,7 @@ internal static class Example12_Planning
 
         Console.WriteLine("Original plan:");
         originalPlan.TryGetPlan(out Plan? plan);
-        Console.WriteLine(plan);
+        Console.WriteLine(plan.ToJson());
 
         var executionResults = originalPlan;
         executionResults.Variables.Update(
@@ -147,7 +175,7 @@ internal static class Example12_Planning
 
         Console.WriteLine("Original plan:");
         originalPlan.TryGetPlan(out Plan? plan);
-        Console.WriteLine(plan);
+        Console.WriteLine(plan.ToJson());
 
         Stopwatch sw = new();
         sw.Start();
@@ -206,7 +234,7 @@ internal static class Example12_Planning
 
         Console.WriteLine("Original plan:");
         executionResults.TryGetPlan(out Plan? plan);
-        Console.WriteLine(plan);
+        Console.WriteLine(plan.ToJson());
     }
 
     private static IKernel InitializeKernelAndPlanner(out IDictionary<string, ISKFunction> planner, int maxTokens = 1024)
@@ -240,11 +268,11 @@ internal static class Example12_Planning
             if (results.TryGetPlan(out plan) && !results.ErrorOccurred)
             {
                 Console.WriteLine($"Step {step} - Execution results:");
-                Console.WriteLine(plan);
+                Console.WriteLine(results.Result);
                 if (!plan.HasNextStep)
                 {
                     Console.WriteLine($"Step {step} - COMPLETE!");
-                    Console.WriteLine(plan);
+                    Console.WriteLine(plan.State.ToString());
                     break;
                 }
 
