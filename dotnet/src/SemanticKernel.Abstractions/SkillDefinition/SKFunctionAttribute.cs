@@ -18,12 +18,17 @@ public sealed class SKFunctionAttribute : Attribute
     /// </summary>
     public string Description { get; }
 
+    public bool IsSafe { get; }
+
     /// <summary>
     /// Tag a C# function as a native function available to SK.
     /// </summary>
     /// <param name="description">Function description, to be used by the planner to auto-discover functions.</param>
-    public SKFunctionAttribute(string description)
+    /// <param name="isSafe">Whether the function is safe to execute. False when the function may attempt to perform an action that will modify data.</param>
+    public SKFunctionAttribute(string description, bool isSafe = true)
     {
         this.Description = description;
     }
+
+    
 }

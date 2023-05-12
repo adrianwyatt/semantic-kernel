@@ -60,6 +60,9 @@ public sealed class Plan : ISKFunction
     [JsonPropertyName("next_step_index")]
     public int NextStepIndex { get; private set; }
 
+    /// <inheritdoc/>
+    public bool IsSafe { get; private set; }
+
     #region ISKFunction implementation
 
     /// <inheritdoc/>
@@ -195,6 +198,10 @@ public sealed class Plan : ISKFunction
     /// </remarks>
     public void AddSteps(params Plan[] steps)
     {
+        if (steps.Any(fn => !fn.IsSafe))
+        {
+            this.IsSafe = false;
+        }
         this._steps.AddRange(steps);
     }
 
@@ -207,6 +214,10 @@ public sealed class Plan : ISKFunction
     /// </remarks>
     public void AddSteps(params ISKFunction[] steps)
     {
+        if (steps.Any(fn => !fn.IsSafe))
+        {
+            this.IsSafe = false;
+        }
         this._steps.AddRange(steps.Select(step => new Plan(step)));
     }
 

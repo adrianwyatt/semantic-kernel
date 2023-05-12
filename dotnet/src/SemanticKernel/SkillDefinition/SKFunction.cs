@@ -38,6 +38,9 @@ public sealed class SKFunction : ISKFunction, IDisposable
     public bool IsSemantic { get; }
 
     /// <inheritdoc/>
+    public bool IsSafe { get; }
+
+    /// <inheritdoc/>
     public CompleteRequestSettings RequestSettings
     {
         get { return this._aiRequestSettings; }
@@ -79,6 +82,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
             skillName: skillName,
             functionName: methodDetails.Name,
             description: methodDetails.Description,
+            isSafe: methodDetails.IsSafe,
             isSemantic: false,
             log: log);
     }
@@ -90,6 +94,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     /// <param name="skillName">SK skill name</param>
     /// <param name="functionName">SK function name</param>
     /// <param name="description">SK function description</param>
+    /// <param name="isSafe">Whether the function is safe to execute. False when the function may attempt to perform an action that will modify data.</param>
     /// <param name="parameters">SK function parameters</param>
     /// <param name="log">Application logger</param>
     /// <returns>SK function instance</returns>
@@ -98,6 +103,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
         string skillName,
         string functionName,
         string description,
+        bool isSafe,
         IEnumerable<ParameterView>? parameters = null,
         ILogger? log = null)
     {
@@ -110,6 +116,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
             description: description,
             skillName: skillName,
             functionName: functionName,
+            isSafe: isSafe,
             isSemantic: false,
             log: log);
     }
@@ -170,6 +177,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
             skillName: skillName,
             functionName: functionName,
             isSemantic: true,
+            isSafe: functionConfig.PromptTemplateConfig.IsSafe,
             log: log);
     }
 
@@ -287,6 +295,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
         public List<ParameterView> Parameters { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
+        public bool IsSafe { get; set; }
     }
 
     internal enum DelegateTypes
@@ -319,6 +328,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
         string skillName,
         string functionName,
         string description,
+        bool isSafe,
         bool isSemantic = false,
         ILogger? log = null
     )
@@ -338,6 +348,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
         this.Name = functionName;
         this.SkillName = skillName;
         this.Description = description;
+        this.IsSafe = isSafe;
     }
 
     private void ReleaseUnmanagedResources()
@@ -608,7 +619,9 @@ public sealed class SKFunction : ISKFunction, IDisposable
 
         result.Description = skFunctionAttribute?.Description ?? "";
 
-        log?.LogTrace("Method '{0}' found, type `{1}`", result.Name, result.Type.ToString("G"));
+        result.IsSafe = skFunctionAttribute?.IsSafe ?? false;
+
+        log?.LogTrace("Method '{0}' found, type `{1}`, isSafe '{2}'", result.Name, result.Type.ToString("G"), result.IsSafe);
 
         return result;
     }

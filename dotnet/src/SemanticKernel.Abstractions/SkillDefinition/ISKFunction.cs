@@ -37,6 +37,12 @@ public interface ISKFunction
     bool IsSemantic { get; }
 
     /// <summary>
+    /// False when the function may attempt to perform an action that will modify data.
+    /// (e.g., sending an email, calling POST/PUT/UPDATE/DELETE APIs, writing to a persistent store, etc.)
+    /// </summary>
+    bool IsSafe { get; }
+
+    /// <summary>
     /// AI service settings
     /// </summary>
     CompleteRequestSettings RequestSettings { get; }

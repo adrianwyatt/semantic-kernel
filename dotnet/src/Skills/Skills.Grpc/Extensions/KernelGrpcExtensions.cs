@@ -176,6 +176,7 @@ public static class KernelGrpcExtensions
             nativeFunction: ExecuteAsync,
             parameters: operationParameters.ToList(),
             description: operation.Name,
+            isSafe: operation.IsSafe,
             skillName: skillName,
             functionName: operation.Name,
             log: kernel.Log);

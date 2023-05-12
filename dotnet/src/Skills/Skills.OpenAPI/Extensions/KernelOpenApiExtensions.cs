@@ -324,9 +324,25 @@ public static class KernelOpenApiExtensions
             description: operation.Description,
             skillName: skillName,
             functionName: operation.Id,
+            isSafe: IsSafe(operation.Method),
             log: kernel.Log);
 
         return kernel.RegisterCustomFunction(skillName, function);
+    }
+
+    /// <summary>
+    /// Checks if the HTTP method is safe.
+    /// </summary>
+    private static bool IsSafe(HttpMethod method)
+    {
+        if (method == HttpMethod.Get ||
+            method == HttpMethod.Head ||
+            method == HttpMethod.Options)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     #endregion

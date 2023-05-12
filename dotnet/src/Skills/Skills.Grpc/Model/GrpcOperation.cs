@@ -81,4 +81,6 @@ internal class GrpcOperation
     /// Specifier to prevent name clashes between types.
     /// </summary>
     public string? Package { get; set; }
+
+    public bool IsSafe { get; set; }
 }

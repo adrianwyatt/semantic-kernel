@@ -153,6 +153,13 @@ public class PromptTemplateConfig
     public InputConfig Input { get; set; } = new();
 
     /// <summary>
+    /// Whether the prompt template is safe to use.
+    /// </summary>
+    [JsonPropertyName("isSafe")]
+    [JsonPropertyOrder(7)]
+    public bool IsSafe { get; set; } = true;
+
+    /// <summary>
     /// Remove some default properties to reduce the JSON complexity.
     /// </summary>
     /// <returns>Compacted prompt template configuration.</returns>

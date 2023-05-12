@@ -88,7 +88,8 @@ public sealed class SKFunctionTests3
             parameters: null,
             description: "description",
             skillName: "skillName",
-            functionName: "functionName");
+            functionName: "functionName",
+            isSafe: true);
 
         SKContext result = await function.InvokeAsync(context);
 
@@ -123,7 +124,8 @@ public sealed class SKFunctionTests3
             nativeFunction: ExecuteAsync,
             description: "description",
             skillName: "skillName",
-            functionName: "functionName");
+            functionName: "functionName",
+            isSafe: true);
 
         SKContext result = await function.InvokeAsync(context);
 

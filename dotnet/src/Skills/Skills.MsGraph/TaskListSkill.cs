@@ -71,7 +71,7 @@ public class TaskListSkill
     /// <summary>
     /// Add a task to a To-Do list with an optional reminder.
     /// </summary>
-    [SKFunction("Add a task to a task list with an optional reminder.")]
+    [SKFunction("Add a task to a task list with an optional reminder.", isSafe: false)]
     [SKFunctionInput(Description = "Title of the task.")]
     [SKFunctionContextParameter(Name = Parameters.Reminder, Description = "Reminder for the task in DateTimeOffset (optional)")]
     public async Task AddTaskAsync(string title, SKContext context)
@@ -99,7 +99,7 @@ public class TaskListSkill
     /// <summary>
     /// Get tasks from the default task list.
     /// </summary>
-    [SKFunction("Get tasks from the default task list.")]
+    [SKFunction("Get tasks from the default task list.", isSafe: true)]
     [SKFunctionContextParameter(Name = Parameters.IncludeCompleted, Description = "Whether to include completed tasks (optional)", DefaultValue = "false")]
     public async Task<string> GetDefaultTasksAsync(SKContext context)
     {
