@@ -9,55 +9,51 @@ using Microsoft.SemanticKernel.AI.TextCompletion;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
 using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.MicrosoftAiPluginManifest;
-using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.MicrosoftAiPluginManifest.FunctionConfig;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin;
-
-public interface IFirstPartyPluginFunction : ISKFunction
-{
-
-}
 
 /// <summary>
 /// TODO
 /// </summary>
-public record FirstPartyPluginFunction : ISKFunction
+public class FirstPartyPluginFunction : IFirstPartyPluginFunction, ISKFunction
 {
     private readonly ILogger _logger;
 
+    private ISKFunction _sKFunction;
+
     public FunctionConfig Config { get; private set; }
-    private readonly ISKFunction _function;
-    public StateKey State { get; set; }
 
-    public string Name => this._function.Name;
+    public IOrchestrationData OrchestrationData { get; set; }
 
-    public string SkillName => this._function.SkillName;
+    public string Name => this._sKFunction.Name;
 
-    public string Description => this._function.Description;
+    public string SkillName => this._sKFunction.SkillName;
 
-    public bool IsSemantic => this._function.IsSemantic;
+    public string Description => this._sKFunction.Description;
+
+    public bool IsSemantic => this._sKFunction.IsSemantic;
 
     public CompleteRequestSettings RequestSettings => throw new NotImplementedException();
 
     public FirstPartyPluginFunction(
         FunctionConfig config,
+        string skillName,
+        string description,
         ILogger? logger = null)
     {
         this._logger = logger ?? NullLogger.Instance;
         this.Config = config;
-        this.State = StateKey.Reasoning; 
-        this.Function = SKFunction.FromNativeFunction(
-            nativeFunction: this.ExecuteAsync,
-            functionName: this.Config.Name,
-            logger: this._logger);
+
+        this._sKFunction = SKFunction.FromNativeFunction(this.ExecuteAsync,
+            skillName: skillName,
+            description: description,
+            functionName: config.Name,
+            logger: logger);
+
+        this.OrchestrationData = new FluxOrchestrationData(config.OrchestrationData);
     }
 
-    public Task<SKContext> ExecuteAsync(SKContext context)
-    {
-        throw new NotImplementedException();
-    }
-
-    public FunctionView Describe()
+    public SKContext ExecuteAsync(SKContext context)
     {
         throw new NotImplementedException();
     }
@@ -68,17 +64,14 @@ public record FirstPartyPluginFunction : ISKFunction
     }
 
     public ISKFunction SetDefaultSkillCollection(IReadOnlySkillCollection skills)
-    {
-        throw new NotImplementedException();
-    }
+        => this._sKFunction.SetDefaultSkillCollection(skills);
 
     public ISKFunction SetAIService(Func<ITextCompletion> serviceFactory)
-    {
-        throw new NotImplementedException();
-    }
+        => this._sKFunction.SetAIService(serviceFactory);
 
     public ISKFunction SetAIConfiguration(CompleteRequestSettings settings)
-    {
-        throw new NotImplementedException();
-    }
+        => this._sKFunction.SetAIConfiguration(settings);
+
+    public FunctionView Describe()
+        => this._sKFunction.Describe();
 }

@@ -31,7 +31,7 @@ namespace Microsoft.SemanticKernel.SkillDefinition;
 /// with additional methods required by the kernel.
 /// </summary>
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class SKFunction : ISKFunction, IDisposable
+public class SKFunction : ISKFunction, IDisposable
 {
     /// <inheritdoc/>
     public string Name { get; }

@@ -1,0 +1,20 @@
+﻿// Copyright (c) Microsoft. All rights reserved.
+
+using System.Collections.Generic;
+using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.MicrosoftAiPluginManifest.FunctionConfig;
+
+namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin;
+
+public class FluxOrchestrationData : IOrchestrationData
+{
+    public string Type => "flux";
+
+    public IDictionary<StateKey, Details> StateDetails { get; } = new Dictionary<StateKey, Details>();
+
+    public class Details
+    {
+        public string Instructions { get; set; } = string.Empty;
+        public string Examples { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+}

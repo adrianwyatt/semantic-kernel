@@ -1,18 +1,13 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.SemanticKernel.Diagnostics;
-using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
-using Microsoft.SemanticKernel.Skills.OpenAPI.Extensions;
-using Microsoft.SemanticKernel.Skills.OpenAPI.Model;
 using Microsoft.SemanticKernel.Text;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin;
@@ -71,93 +66,18 @@ public static class KernelFirstPartyPluginExtensions
             }
 
             // Construct SK function
-            foreach (var functionConfig in manifest.FunctionConfigs)
+            foreach (MicrosoftAiPluginManifest.FunctionConfig functionConfig in manifest.FunctionConfigs)
             {
-                FirstPartyPluginFunction function = new FirstPartyPluginFunction(config); // TODO logger
-                result.Add(function.Config.Name, function);
-                
+                foreach (MicrosoftAiPluginManifest.FunctionConfig.StateKey functionStateKey in functionConfig.States.Keys)
+                {
+                    FirstPartyPluginFunction function = new(functionConfig); // TODO logger
+                    result.Add(function.Config.Name, function);
+                }
             }
-            
-            
+
+
         }
 
         return result;
-    }
-
-    private static ISKFunction RegisterFunction(
-        this IKernel kernel,
-        string skillName,
-        RestApiOperationRunner runner,
-        RestApiOperation operation,
-        Uri? serverUrlOverride = null,
-        CancellationToken cancellationToken = default)
-    {
-        var restOperationParameters = operation.GetParameters(serverUrlOverride);
-
-        var logger = kernel.Logger ?? NullLogger.Instance;
-
-        async Task<SKContext> ExecuteAsync(SKContext context)
-        {
-            try
-            {
-                // Extract function arguments from context
-                var arguments = new Dictionary<string, string>();
-                foreach (var parameter in restOperationParameters)
-                {
-                    // A try to resolve argument by alternative parameter name
-                    if (!string.IsNullOrEmpty(parameter.AlternativeName) && context.Variables.TryGetValue(parameter.AlternativeName!, out string? value))
-                    {
-                        arguments.Add(parameter.Name, value);
-                        continue;
-                    }
-
-                    // A try to resolve argument by original parameter name
-                    if (context.Variables.TryGetValue(parameter.Name, out value))
-                    {
-                        arguments.Add(parameter.Name, value);
-                        continue;
-                    }
-
-                    if (parameter.IsRequired)
-                    {
-                        throw new KeyNotFoundException(
-                            $"No variable found in context to use as an argument for the '{parameter.Name}' parameter of the '{skillName}.{operation.Id}' Rest function.");
-                    }
-                }
-
-                var result = await runner.RunAsync(operation, arguments, cancellationToken).ConfigureAwait(false);
-                if (result != null)
-                {
-                    context.Variables.Update(result.ToString());
-                }
-            }
-            catch (Exception ex) when (!ex.IsCriticalException())
-            {
-                logger.LogWarning(ex, "Something went wrong while rendering the Rest function. Function: {0}.{1}. Error: {2}", skillName, operation.Id,
-                    ex.Message);
-                throw ex;
-            }
-
-            return context;
-        }
-
-        var parameters = restOperationParameters
-            .Select(p => new ParameterView
-            {
-                Name = p.AlternativeName ?? p.Name,
-                Description = $"{p.Description ?? p.Name}{(p.IsRequired ? " (required)" : string.Empty)}",
-                DefaultValue = p.DefaultValue ?? string.Empty
-            })
-            .ToList();
-
-        var function = SKFunction.FromNativeFunction(
-            nativeFunction: ExecuteAsync,
-            parameters: parameters,
-            description: operation.Description,
-            skillName: skillName,
-            functionName: ConvertOperationIdToValidFunctionName(operation.Id, logger),
-            logger: logger);
-
-        return kernel.RegisterCustomFunction(function);
     }
 }
