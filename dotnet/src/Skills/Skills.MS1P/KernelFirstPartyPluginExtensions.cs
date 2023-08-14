@@ -70,12 +70,15 @@ public static class KernelFirstPartyPluginExtensions
             {
                 foreach (MicrosoftAiPluginManifest.FunctionConfig.StateKey functionStateKey in functionConfig.States.Keys)
                 {
-                    FirstPartyPluginFunction function = new(functionConfig); // TODO logger
+                    FirstPartyPluginFunction function = new(
+                        config: functionConfig,
+                        skillName: manifest.NameForHuman, // TODO: use the model name, but current examples don't have those
+                        description: manifest.DescriptionForHuman, // TODO: use the model descriptions, but current examples don't have those
+                        orchestrationData: FluxOrchestrationData.FromFunctionConfig(functionConfig)
+                        );
                     result.Add(function.Config.Name, function);
                 }
             }
-
-
         }
 
         return result;

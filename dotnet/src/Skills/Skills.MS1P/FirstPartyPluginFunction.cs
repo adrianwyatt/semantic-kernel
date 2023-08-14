@@ -21,9 +21,9 @@ public class FirstPartyPluginFunction : IFirstPartyPluginFunction, ISKFunction
 
     private ISKFunction _sKFunction;
 
-    public FunctionConfig Config { get; private set; }
+    public FunctionConfig Config { get; }
 
-    public IOrchestrationData OrchestrationData { get; set; }
+    public IOrchestrationData? OrchestrationData { get; }
 
     public string Name => this._sKFunction.Name;
 
@@ -39,29 +39,29 @@ public class FirstPartyPluginFunction : IFirstPartyPluginFunction, ISKFunction
         FunctionConfig config,
         string skillName,
         string description,
+        IOrchestrationData? orchestrationData = null,
         ILogger? logger = null)
     {
         this._logger = logger ?? NullLogger.Instance;
         this.Config = config;
+        this.OrchestrationData = orchestrationData;
 
         this._sKFunction = SKFunction.FromNativeFunction(this.ExecuteAsync,
             skillName: skillName,
             description: description,
             functionName: config.Name,
             logger: logger);
-
-        this.OrchestrationData = new FluxOrchestrationData(config.OrchestrationData);
     }
 
     public SKContext ExecuteAsync(SKContext context)
     {
+        // TODO look at runtimes.
+        // 
         throw new NotImplementedException();
     }
 
     public Task<SKContext> InvokeAsync(SKContext context, CompleteRequestSettings? settings = null, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
+        => this._sKFunction.InvokeAsync(context, settings, cancellationToken);
 
     public ISKFunction SetDefaultSkillCollection(IReadOnlySkillCollection skills)
         => this._sKFunction.SetDefaultSkillCollection(skills);
