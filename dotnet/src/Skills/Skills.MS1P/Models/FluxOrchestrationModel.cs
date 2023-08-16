@@ -1,11 +1,11 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Collections.Generic;
-using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models.FluxPluginManifest;
+using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models.FluxPluginModel;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models;
 
-public class FluxOrchestrationData : IOrchestrationData
+public record FluxOrchestrationModel : IOrchestrationModel
 {
     public string Type => "flux";
 
@@ -18,9 +18,9 @@ public class FluxOrchestrationData : IOrchestrationData
         public string Description { get; set; } = string.Empty;
     }
 
-    public static FluxOrchestrationData FromFunctionConfig(PluginFunction pluginFunction)
+    public static FluxOrchestrationModel FromFunctionConfig(PluginFunction pluginFunction)
     {
-        FluxOrchestrationData data = new();
+        FluxOrchestrationModel data = new();
         foreach (KeyValuePair<StateKey, State> state in pluginFunction.States)
         {
             data.StateDetails.Add(state.Key, new Details()

@@ -11,7 +11,7 @@ using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
 using Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models;
 using Microsoft.SemanticKernel.Skills.OpenAPI.Extensions;
-using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models.FluxPluginManifest;
+using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models.FluxPluginModel;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin;
 
@@ -22,27 +22,32 @@ public partial class FirstPartyPluginFunction : ISKFunction
 {
     private delegate Task<SKContext> ExecuteAsyncDelegate(SKContext context, CompleteRequestSettings? settings = null, CancellationToken cancellationToken = default);
 
-    private readonly ILogger _logger;
-
     public PluginFunction PluginFunction { get; }
 
-    public IOrchestrationData OrchestrationData { get; }
+    public IOrchestrationModel OrchestrationData { get; }
 
-    private readonly RuntimeRecord _runtime;
+    private readonly IRuntimeModel _runtime;
 
+    /// <inheritdoc/>
     public string Name { get; }
 
+    /// <inheritdoc/>
     public string SkillName { get; }
 
+    /// <inheritdoc/>
     public string Description { get; }
 
+    /// <inheritdoc/>
     public bool IsSemantic { get; }
 
-    public CompleteRequestSettings RequestSettings { get; } = new();
+    /// <inheritdoc/>
+    public CompleteRequestSettings RequestSettings { get; } = new(); // TODO required when semantic
 
-    public IList<ParameterView> Parameters { get; } = new List<ParameterView>(); // TODO populate
+    private readonly ILogger _logger;
 
-    private Dictionary<Type, ExecuteAsyncDelegate> _runtimeHandlers; // TODO Find runtime handlers dynamically
+    private readonly IList<ParameterView> _parameters;
+
+    private readonly Dictionary<Type, ExecuteAsyncDelegate> _runtimeHandlers;
 
     private readonly IKernel _kernel;
 
@@ -50,40 +55,48 @@ public partial class FirstPartyPluginFunction : ISKFunction
         PluginFunction pluginFunction,
         string skillName,
         string description,
-        IOrchestrationData orchestrationData,
-        RuntimeRecord runtime,
+        IOrchestrationModel orchestrationData,
+        IRuntimeModel runtime,
+        IList<ParameterView> parameters,
         IKernel kernel,
         ILogger? logger = null)
     {
         this._logger = logger ?? NullLogger.Instance;
+        this._runtime = runtime;
+        this._kernel = kernel;
+        this._parameters = parameters;
+
         this.PluginFunction = pluginFunction;
         this.OrchestrationData = orchestrationData;
 
         this.SkillName = skillName;
         this.Description = description;
         this.Name = pluginFunction.Name;
-        this._runtime = runtime;
-        this._kernel = kernel;
 
+        // Map runtime types to handlers
+        // TODO Find runtime handlers dynamically
         this._runtimeHandlers = new Dictionary<Type, ExecuteAsyncDelegate>()
         {
-            { typeof(OpenApiRuntimeRecord), this.OpenApiExecuteAsync }
+            { typeof(OpenApiRuntimeModel), this.OpenApiExecuteAsync }
         };
     }
 
+    /// <inheritdoc/>
     public Task<SKContext> InvokeAsync(SKContext context, CompleteRequestSettings? settings = null, CancellationToken cancellationToken = default)
     {
-        // Get state from context
+        // Get state string from context
         if (!context.Variables.TryGetValue("state", out string? state))
         {
             throw new InvalidOperationException("State not found in context variables.");
         }
 
+        // Parse state string to StateKey
         if (!Enum.TryParse<StateKey>(state, true, out StateKey stateKey))
         {
             throw new InvalidOperationException($"State '{state}' is not a valid state.");
         }
 
+        // Get runtime handler
         if (!this._runtimeHandlers.TryGetValue(this._runtime.GetType(), out ExecuteAsyncDelegate? runtimeHandlerAsync))
         {
             throw new InvalidOperationException($"Runtime '{this._runtime.GetType().Name}' is not supported.");
@@ -92,58 +105,38 @@ public partial class FirstPartyPluginFunction : ISKFunction
         return runtimeHandlerAsync(context, settings, cancellationToken);
     }
 
+    /// <inheritdoc/>
     public ISKFunction SetDefaultSkillCollection(IReadOnlySkillCollection skills)
         => this;
 
+    /// <inheritdoc/>
     public ISKFunction SetAIService(Func<ITextCompletion> serviceFactory)
-    {
-        // TODO check if semantic - runtimes?
-        return this;
-    }
+        => this; // TODO check if semantic - runtimes?
 
+    /// <inheritdoc/>
     public ISKFunction SetAIConfiguration(CompleteRequestSettings settings)
-    {
-        // TODO check if semantic - runtimes?
-        return this;
-    }
+        => this; // TODO check if semantic - runtimes?
+
+    /// <inheritdoc/>
     public FunctionView Describe()
-    {
-        // todo extend function view to contain orchestration data
-        return new OrchestrationFunctionView
+        => new OrchestrationFunctionView
         {
             IsSemantic = this.IsSemantic,
             Name = this.Name,
             SkillName = this.SkillName,
             Description = this.Description,
-            Parameters = this.Parameters,
+            Parameters = this._parameters,
             OrchestrationData = this.OrchestrationData
         };
-    }
 
-    #region Runtime Handlers
-    private async Task<SKContext> OpenApiExecuteAsync(SKContext context, CompleteRequestSettings? settings = null, CancellationToken cancellationToken = default)
+    private Task<SKContext> OpenApiExecuteAsync(SKContext context, CompleteRequestSettings? settings = null, CancellationToken cancellationToken = default)
     {
-        OpenApiRuntimeRecord openApiRuntime = this._runtime as OpenApiRuntimeRecord
-            ?? throw new InvalidOperationException("Runtime is not of type OpenApiRuntimeRecord.");
+        OpenApiRuntime openApiRuntime = new OpenApiRuntime(
+            this._runtime as OpenApiRuntimeModel ?? throw new InvalidOperationException("Runtime is not of type OpenApiRuntimeRecord."),
+            new OpenApiSkillExecutionParameters(),
+            this,
+            this._kernel);
 
-        OpenApiSkillExecutionParameters openApiParameters = new();
-        // TODO populate execution parameters.
-
-        // Import the openAPI functions
-        IDictionary<string, ISKFunction> openApiFunctions = await this._kernel.ImportAIPluginAsync(
-            skillName: this.SkillName,
-            uri: openApiRuntime.Url,
-            executionParameters: openApiParameters,
-            cancellationToken: cancellationToken)
-            .ConfigureAwait(false);
-
-        // Find the function to execute
-        if (!openApiFunctions.TryGetValue(this.Name, out ISKFunction? openApiFunction))
-        {
-            throw new InvalidOperationException($"Function '{this.Name}' not found in OpenAPI plugin ({openApiRuntime.Url}).");
-        }
-
-        return await openApiFunction.InvokeAsync(context, settings, cancellationToken).ConfigureAwait(false);
+        return openApiRuntime.InvokeAsync(context, settings, cancellationToken);
     }
-    #endregion
 }

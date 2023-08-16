@@ -5,14 +5,13 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Newtonsoft.Json.Schema;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models;
 
 /// <summary>
 /// An augmented manifest for an AI plugin to incorporate specifics of how plugins integrate with planning/orchestration.
 /// </summary>
-public record FluxPluginManifest
+public record FluxPluginModel
 {
     [DataMember(Name = "name")]
     [JsonPropertyName("name")]
@@ -62,7 +61,7 @@ public record FluxPluginManifest
 
         [DataMember(Name = "returns")]
         [JsonPropertyName("returns")]
-        public JsonSchema? Returns { get; set; }
+        public JsonNode? Returns { get; set; }
 
         [DataMember(Name = "states")]
         [JsonPropertyName("states")]
@@ -85,7 +84,7 @@ public record FluxPluginManifest
 
         [DataMember(Name = "properties")]
         [JsonPropertyName("properties")]
-        public IDictionary<string, JsonSchema> Properties { get; set; } = new Dictionary<string, JsonSchema>();
+        public IDictionary<string, JsonNode> Properties { get; set; } = new Dictionary<string, JsonNode>();
 
         [DataMember(Name = "required")]
         [JsonPropertyName("required")]

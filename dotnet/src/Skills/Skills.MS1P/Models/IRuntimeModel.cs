@@ -6,13 +6,13 @@ using System.Text.Json.Serialization;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models;
 
-public record RuntimeRecord
+public interface IRuntimeModel
 {
     [DataMember(Name = "run_for")]
     [JsonPropertyName("run_for")]
-    public IEnumerable<string>? RunFor { get; set; }
+    IEnumerable<string>? RunFor { get; }
 
     [DataMember(Name = "type")]
     [JsonPropertyName("type")]
-    public string Type { get; set; } = "NONE";
+    string Type { get; }
 }
