@@ -3,12 +3,11 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json.Schema;
 
-namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin;
+namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models;
 
 /// <summary>
 /// An augmented manifest for an AI plugin to incorporate specifics of how plugins integrate with planning/orchestration.
@@ -68,58 +67,50 @@ public record FluxPluginManifest
         [DataMember(Name = "states")]
         [JsonPropertyName("states")]
         public IDictionary<StateKey, State> States { get; set; } = new Dictionary<StateKey, State>();
+    }
 
-        [DataMember(Name = "runtimes")]
-        [JsonPropertyName("runtimes")]
-        public IEnumerable<Runtime> Runtimes { get; set; } = new List<Runtime>();
+    public enum ProgressStyle
+    {
+        None,
+        ShowUsage,
+        ShowUsageWithInput,
+        ShowUsageWithInputAndOutput
+    }
 
-        
+    public record FunctionParameters
+    {
+        [DataMember(Name = "type")]
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = "object";
 
-        public enum ProgressStyle
-        {
-            None,
-            ShowUsage,
-            ShowUsageWithInput,
-            ShowUsageWithInputAndOutput
-        }
+        [DataMember(Name = "properties")]
+        [JsonPropertyName("properties")]
+        public IDictionary<string, JsonSchema> Properties { get; set; } = new Dictionary<string, JsonSchema>();
 
-        public record FunctionParameters
-        {
-            [DataMember(Name = "type")]
-            [JsonPropertyName("type")]
-            public string Type { get; set; } = "object";
+        [DataMember(Name = "required")]
+        [JsonPropertyName("required")]
+        public IEnumerable<string> Required { get; set; } = new List<string>();
+    }
 
-            [DataMember(Name = "properties")]
-            [JsonPropertyName("properties")]
-            public IDictionary<string, JsonSchema> Properties { get; set; } = new Dictionary<string, JsonSchema>();
+    public enum StateKey
+    {
+        Reasoning,
+        Responding,
+        Disengaging,
+    }
 
-            [DataMember(Name = "required")]
-            [JsonPropertyName("required")]
-            public IEnumerable<string> Required { get; set; } = new List<string>();
-        }
+    public record State
+    {
+        [DataMember(Name = "description")]
+        [JsonPropertyName("description")]
+        public string Description { get; set; } = string.Empty;
 
-        public enum StateKey
-        {
-            Reasoning,
-            Responding,
-            Disengaging,
-        }
+        [DataMember(Name = "instructions")]
+        [JsonPropertyName("instructions")]
+        public string Instructions { get; set; } = string.Empty;
 
-        public record State
-        {
-            [DataMember(Name = "description")]
-            [JsonPropertyName("description")]
-            public string Description { get; set; } = string.Empty;
-
-            [DataMember(Name = "instructions")]
-            [JsonPropertyName("instructions")]
-            public string Instructions { get; set; } = string.Empty;
-
-            [DataMember(Name = "examples")]
-            [JsonPropertyName("examples")]
-            public string Examples { get; set; } = string.Empty;
-        }
-
-
+        [DataMember(Name = "examples")]
+        [JsonPropertyName("examples")]
+        public string Examples { get; set; } = string.Empty;
     }
 }

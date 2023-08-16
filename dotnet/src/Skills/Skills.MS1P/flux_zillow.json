@@ -175,12 +175,10 @@
                 "auth": {
                   "type": "none"
                 },
-                "open_api_spec": {
-                  "url": "https://turingbotdev.blob.core.windows.net/chatgpt-plugins/zillow/api.yaml",
-                  "progress_style": "ShowUsageWithInput",
-                  "icon_url": "https://www.bing.com/th?id=OSK.4705F48BD0A07DD39F5D390011644FDF",
-                  "timeout": "20s"
-                }
+                "url": "https://turingbotdev.blob.core.windows.net/chatgpt-plugins/zillow/api.yaml",
+                "progress_style": "ShowUsageWithInput",
+                "icon_url": "https://www.bing.com/th?id=OSK.4705F48BD0A07DD39F5D390011644FDF",
+                "timeout": "20s"
               }
             ]
           }
