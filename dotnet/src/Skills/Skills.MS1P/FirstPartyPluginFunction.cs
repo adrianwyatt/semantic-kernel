@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -8,70 +10,99 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.SemanticKernel.AI.TextCompletion;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
-using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.MicrosoftAiPluginManifest;
+using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.FluxPluginManifest;
+using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.FluxPluginManifest.PluginFunction;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin;
 
 /// <summary>
 /// TODO
 /// </summary>
-public class FirstPartyPluginFunction : IFirstPartyPluginFunction, ISKFunction
+public class FirstPartyPluginFunction : /*IFirstPartyPluginFunction,*/ ISKFunction
 {
     private readonly ILogger _logger;
 
-    private ISKFunction _sKFunction;
+    public PluginFunction PluginFunction { get; }
 
-    public FunctionConfig Config { get; }
+    public IOrchestrationData OrchestrationData { get; }
 
-    public IOrchestrationData? OrchestrationData { get; }
+    public Runtime Runtime { get; }
 
-    public string Name => this._sKFunction.Name;
+    public string Name { get; }
 
-    public string SkillName => this._sKFunction.SkillName;
+    public string SkillName { get; }
 
-    public string Description => this._sKFunction.Description;
+    public string Description { get; }
 
-    public bool IsSemantic => this._sKFunction.IsSemantic;
+    public bool IsSemantic { get; }
 
-    public CompleteRequestSettings RequestSettings => throw new NotImplementedException();
+    public CompleteRequestSettings RequestSettings { get; } = new();
+
+    public IList<ParameterView> Parameters { get; } = new List<ParameterView>(); // TODO populate
 
     public FirstPartyPluginFunction(
-        FunctionConfig config,
+        PluginFunction pluginFunction,
         string skillName,
         string description,
-        IOrchestrationData? orchestrationData = null,
+        IOrchestrationData orchestrationData,
         ILogger? logger = null)
     {
         this._logger = logger ?? NullLogger.Instance;
-        this.Config = config;
+        this.PluginFunction = pluginFunction;
         this.OrchestrationData = orchestrationData;
 
-        this._sKFunction = SKFunction.FromNativeFunction(this.ExecuteAsync,
-            skillName: skillName,
-            description: description,
-            functionName: config.Name,
-            logger: logger);
-    }
-
-    public SKContext ExecuteAsync(SKContext context)
-    {
-        // TODO look at runtimes.
-        // 
-        throw new NotImplementedException();
+        this.SkillName = skillName;
+        this.Description = description;
+        this.Name = pluginFunction.Name;
     }
 
     public Task<SKContext> InvokeAsync(SKContext context, CompleteRequestSettings? settings = null, CancellationToken cancellationToken = default)
-        => this._sKFunction.InvokeAsync(context, settings, cancellationToken);
+    {
+        // Get state from context
+        if (!context.Variables.TryGetValue("state", out string? state))
+        {
+            throw new InvalidOperationException("State not found in context variables.");
+        }
+
+        if (!Enum.TryParse<StateKey>(state, true, out StateKey stateKey))
+        {
+            throw new InvalidOperationException($"State '{state}' is not a valid state.");
+        }
+
+        // Find which runtime is responsible for this function
+        foreach (var runtime in this.PluginFunction.Runtimes)
+        {
+
+        }
+
+        throw new NotImplementedException();
+    }
 
     public ISKFunction SetDefaultSkillCollection(IReadOnlySkillCollection skills)
-        => this._sKFunction.SetDefaultSkillCollection(skills);
+        => this;
 
     public ISKFunction SetAIService(Func<ITextCompletion> serviceFactory)
-        => this._sKFunction.SetAIService(serviceFactory);
+    {
+        // TODO check if semantic - runtimes?
+        return this;
+    }
 
     public ISKFunction SetAIConfiguration(CompleteRequestSettings settings)
-        => this._sKFunction.SetAIConfiguration(settings);
-
+    {
+        // TODO check if semantic - runtimes?
+        return this;
+    }
     public FunctionView Describe()
-        => this._sKFunction.Describe();
+    {
+        // todo extend function view to contain orchestration data
+        return new OrchestrationFunctionView
+        {
+            IsSemantic = this.IsSemantic,
+            Name = this.Name,
+            SkillName = this.SkillName,
+            Description = this.Description,
+            Parameters = this.Parameters,
+            OrchestrationData = this.OrchestrationData
+        };
+    }
 }

@@ -1,8 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Collections.Generic;
-using Microsoft.SemanticKernel.SemanticFunctions;
-using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.MicrosoftAiPluginManifest.FunctionConfig;
+using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.FluxPluginManifest.PluginFunction;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin;
 
@@ -19,10 +18,10 @@ public class FluxOrchestrationData : IOrchestrationData
         public string Description { get; set; } = string.Empty;
     }
 
-    public static FluxOrchestrationData FromFunctionConfig(MicrosoftAiPluginManifest.FunctionConfig config)
+    public static FluxOrchestrationData FromFunctionConfig(FluxPluginManifest.PluginFunction pluginFunction)
     {
         FluxOrchestrationData data = new();
-        foreach (KeyValuePair<StateKey, State> state in config.States)
+        foreach (KeyValuePair<StateKey, State> state in pluginFunction.States)
         {
             data.StateDetails.Add(state.Key, new Details()
             {
@@ -32,6 +31,5 @@ public class FluxOrchestrationData : IOrchestrationData
             });
         }
         return data;
-
     }
 }

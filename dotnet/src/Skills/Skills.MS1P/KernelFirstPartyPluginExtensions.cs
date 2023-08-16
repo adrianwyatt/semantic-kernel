@@ -1,7 +1,9 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -58,26 +60,51 @@ public static class KernelFirstPartyPluginExtensions
                 continue;
             }
 
-            MicrosoftAiPluginManifest? manifest = JsonSerializer.Deserialize<MicrosoftAiPluginManifest>(aiPlugin.ToJson());
+            FluxPluginManifest? manifest = JsonSerializer.Deserialize<FluxPluginManifest>(aiPlugin.ToJson());
             if (manifest == null)
             {
                 // TODO Log an error or warning instead
                 throw new InvalidDataException("Unable to deserialize the manifest");
             }
 
-            // Construct SK function
-            foreach (MicrosoftAiPluginManifest.FunctionConfig functionConfig in manifest.FunctionConfigs)
+            // Deserialize the runtimes
+            List<Runtime> runtimes = new(); 
+            foreach (JsonNode runtime in manifest.Runtimes)
             {
-                foreach (MicrosoftAiPluginManifest.FunctionConfig.StateKey functionStateKey in functionConfig.States.Keys)
+                string? runtimeType = runtime["type"]?.ToString();
+                if (string.IsNullOrWhiteSpace(runtimeType))
                 {
-                    FirstPartyPluginFunction function = new(
-                        config: functionConfig,
-                        skillName: manifest.NameForHuman, // TODO: use the model name, but current examples don't have those
-                        description: manifest.DescriptionForHuman, // TODO: use the model descriptions, but current examples don't have those
-                        orchestrationData: FluxOrchestrationData.FromFunctionConfig(functionConfig)
-                        );
-                    result.Add(function.Config.Name, function);
+                    throw new InvalidOperationException("Runtime type not set.");
                 }
+
+                switch (runtimeType!.ToUpperInvariant())
+                {
+                    case OpenApiRuntime.TypeValue:
+                        OpenApiRuntime? openApiRuntime = JsonSerializer.Deserialize<OpenApiRuntime>(runtime.ToJson());
+                        if (openApiRuntime == null)
+                        {
+                            throw new InvalidDataException($"Unable to deserialize the '{runtimeType}' runtime.");
+                        }
+                        runtimes.Add(openApiRuntime);
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Unsupported runtime type: {runtimeType}.");
+                }
+            }
+
+            // Construct SK function
+            foreach (FluxPluginManifest.PluginFunction pluginFunction in manifest.Functions)
+            {
+                // Find the runtime type for this function
+                runtimes.Where(r => r.RunFor.Contains(pluginFunction*))
+
+                FirstPartyPluginFunction function = new(
+                    pluginFunction: pluginFunction,
+                    skillName: manifest.Namespace,
+                    description: manifest.Description,
+                    orchestrationData: FluxOrchestrationData.FromFunctionConfig(pluginFunction)
+                    );
+                result.Add(function.PluginFunction.Name, function);
             }
         }
 

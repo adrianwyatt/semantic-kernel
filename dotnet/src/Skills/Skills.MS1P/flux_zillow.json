@@ -1,0 +1,194 @@
+﻿{
+  "headers": {
+    "author": "semenshi@microsoft.com",
+    "altNames": [ "semantic-kernel" ],
+    "isPersistent": true,
+    "allowedClients": [
+      "BingProd",
+      "BingStaging",
+      "SkypeProd",
+      "SkypeTest",
+      "SwiftKeyProd",
+      "SwiftKeyTest"
+    ]
+  },
+  "requires": [
+    "flux"
+  ],
+  "options": [
+    {
+      "options": {
+        "AiPlugins": [
+          {
+            "name": "Zillow",
+            "description": "Home searches",
+            "logo_url": "https://www.bing.com/th?id=OSK.4705F48BD0A07DD39F5D390011644FDF",
+            "contact_email": "ionutro@microsoft.com",
+            "legal_info_url": "<legal url>",
+            "schema_version": "v0",
+            "namespace": "zillow",
+            "functions": [
+              {
+                "name": "propertiesSearch",
+                "description": "This tool is used to find a list of current homes for sale or for rent based on search criteria. Will return property and listing information for each home in the results.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "neighborhood": {
+                      "type": "string",
+                      "description": "Neighborhood that homes returned in results will be located in"
+                    },
+                    "zipCode": {
+                      "type": "integer",
+                      "description": "Zip code or postal code that homes returned in results will be located in"
+                    },
+                    "city": {
+                      "type": "string",
+                      "description": "City that homes returned in results will be located in"
+                    },
+                    "state": {
+                      "type": "string",
+                      "description": "State that homes returned in results will be located in"
+                    },
+                    "minPrice": {
+                      "type": "integer",
+                      "description": "Minimum for sale price for the for sale listings returned or the minimum monthly rental price for the for rent listings returned"
+                    },
+                    "maxPrice": {
+                      "type": "integer",
+                      "description": "Maximum for sale price for the for sale listings returned or the maximum monthly rental price for the for rent listings returned"
+                    },
+                    "minBedrooms": {
+                      "type": "number",
+                      "description": "Minimum number of bedrooms in the homes that will be returned"
+                    },
+                    "maxBedrooms": {
+                      "type": "number",
+                      "description": "Maximum number of bedrooms in the homes that will be returned"
+                    },
+                    "minBathrooms": {
+                      "type": "number",
+                      "description": "Minimum number of bathrooms in the homes that will be returned"
+                    },
+                    "maxBathrooms": {
+                      "type": "number",
+                      "description": "Maximum number of bathrooms in the homes that will be returned"
+                    },
+                    "listingType": {
+                      "type": "string",
+                      "enum": [
+                        "sale",
+                        "rent",
+                        "sold"
+                      ],
+                      "default": "sale",
+                      "description": "Use \"sale\" to return homes that are currently available to purchase. Use \"rent\" to return homes that are currently available to rent. Use \"sold\" to return homes that have recently sold."
+                    },
+                    "homeType": {
+                      "type": "string",
+                      "enum": [
+                        "all",
+                        "townhome",
+                        "land",
+                        "manufactured",
+                        "multiFamily",
+                        "apartment",
+                        "condo",
+                        "singleFamily"
+                      ],
+                      "default": "all",
+                      "description": "Type of homes that will be returned"
+                    },
+                    "hasOpenHouse": {
+                      "type": "boolean",
+                      "description": "Filter results to only include homes that have an open house"
+                    },
+                    "sortBy": {
+                      "type": "string",
+                      "enum": [
+                        "daysOn",
+                        "yearBuilt",
+                        "price",
+                        "lotArea",
+                        "livingArea",
+                        "beds",
+                        "baths"
+                      ],
+                      "default": "daysOn",
+                      "description": "Sort results based on an attribute about the home. \"DaysOn\" means how many days the home has been available for sale or for rent."
+                    },
+                    "sortOrder": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ],
+                      "default": "desc",
+                      "description": "Use \"asc\" to sort the results from smallest to largest based on sortBy. Use \"desc\" to sort the results from largest to smallest based on sortBy."
+                    },
+                    "userQuestion": {
+                      "type": "string",
+                      "description": "The question the user is asking in the prompt"
+                    }
+                  }
+                },
+                "returns": {
+                  "type": "string"
+                },
+                "reasoning_description": "\n# `${propertiesSearch}(**params) -> str`: This tool is used to find a list of current homes for sale or for rent based on search criteria. Will return property and listing information for each home in the results.",
+                "reasoning_instructions": "\n- Decide whether to invoke `${propertiesSearch}(**params)`:\n\t- I can invoke `${propertiesSearch}(**params)` with multiple different `**params` at the same time if needed.\n\t- Check the last user message in the `conversation_memory` and tool invocation history in the `turn_memory`:\n\t\t* Do I need to perform relevant real estate searches to find a list of current homes for sale or for rent based on search criteria, based on the `result` from `turn_memory`, to respond to the user message accurately? If so, invoke `${propertiesSearch}(**params)`\n        * here are the parameters:\n            * neighborhood(string): Neighborhood that homes returned in results will be located in\n            * zipCode(integer): Zip code or postal code that homes returned in results will be located in\n            * city(string):  City that homes returned in results will be located in\n            * state(string): State that homes returned in results will be located in\n            * minPrice(integer): Minimum for sale price for the for sale listings returned or the minimum monthly rental price for the for rent listings returned\n            * maxPrice(integer): Maximum for sale price for the for sale listings returned or the maximum monthly rental price for the for rent listings returned\n            * minBedrooms(number): Minimum number of bedrooms in the homes that will be returned\n            * maxBedrooms(number): Maximum number of bedrooms in the homes that will be returned\n            * minBathrooms(number): Minimum number of bathrooms in the homes that will be returned\n            * maxBathrooms(number): Maximum number of bathrooms in the homes that will be returned\n            * listingType(string): Use \"sale\" to return homes that are currently available to purchase. Use \"rent\" to return homes that are currently available to rent. Use \"sold\" to return homes that have recently sold. Allowed values are [\"sale\", \"rent\", \"sold\"], default is \"sale\"\n            * homeType(string): Type of homes that will be returned. Allowed values are [\"all\", \"townhome\", \"land\", \"manufactured\", \"multiFamily\", \"apartment\", \"condo\", \"singleFamily\"], default is \"all\"\n            * hasOpenHouse(boolean): Filter results to only include homes that have an open house\n            * sortBy(string):  Sort results based on an attribute about the home. \"DaysOn\" means how many days the home has been available for sale or for rent. Allowed values are [\"daysOn\", \"yearBuilt\", \"price\", \"lotArea\", \"livingArea\", \"beds\", \"baths\"], default is \"daysOn\"\n            * sortOrder(string): Use \"asc\" to sort the results from smallest to largest based on sortBy. Use \"desc\" to sort the results from largest to smallest based on sortBy. Allowed values are [\"asc\", \"desc\"], default is \"asc\"\n            * userQuestion(string): The question the user is asking in the prompt",
+                "responding_description": "\n# `${propertiesSearch}(**params) -> str`: This tool is used to find a list of current homes for sale or for rent based on search criteria. Will return property and listing information for each home in the results.",
+                "responding_instructions": "\n    - Check the results from `${propertiesSearch}(**params) -> str`:\n      - I **must** include hyperlinked home names from Zillow results following GitHub flavored markdown."
+              },
+              {
+                "name": "propertyDetails",
+                "description": "This tool is used to find information about a specific home. Will return property and listing information for the home.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string",
+                      "description": "Address of the property to lookup"
+                    },
+                    "zpid": {
+                      "type": "integer",
+                      "description": "Identifier for the home that was returned in this plugin's Search API"
+                    },
+                    "userQuestion": {
+                      "type": "string",
+                      "description": "The question the user is asking in the prompt"
+                    }
+                  }
+                },
+                "returns": {
+                  "type": "string"
+                },
+                "reasoning_description": "\n# `${propertyDetails}(**params) -> str`: This tool is used to find information about a specific home. Will return property and listing information for the home.",
+                "reasoning_instructions": "- Decide whether to invoke `${propertyDetails}(**params)`:\n\t- I can invoke `${propertyDetails}(**params)` with multiple different `**params` at the same time if needed.\n\t- Check the last user message in the `conversation_memory` and tool invocation history in the `turn_memory`:\n\t\t* Do I need to find information about a specific home, based on the `result` from `turn_memory`, to respond to the user message accurately? If so, invoke `${propertyDetails}(**params)`\n        * here are the parameters:\n            * address(string): Address of the property to lookup\n            * zpid(integer): Identifier for the home that was returned in this plugin's Search API\n            * userQuestion(string): The question the user is asking in the prompt",
+                "responding_description": "`${propertyDetails}(**params) -> str` returns information about a specific home. `params` is a list of parameters used as a filtering criteria",
+                "responding_instructions": "\n    - Check the results from `${propertyDetails}(**params) -> str`:\n      - I **must** include hyperlinked home names from Zillow results following GitHub flavored markdown."
+              }
+            ],
+            "runtimes": [
+              {
+                "type": "OpenApi",
+                "auth": {
+                  "type": "none"
+                },
+                "open_api_spec": {
+                  "url": "https://turingbotdev.blob.core.windows.net/chatgpt-plugins/zillow/api.yaml",
+                  "progress_style": "ShowUsageWithInput",
+                  "icon_url": "https://www.bing.com/th?id=OSK.4705F48BD0A07DD39F5D390011644FDF",
+                  "timeout": "20s"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "testsConfig": {
+    "tests": []
+  }
+}
