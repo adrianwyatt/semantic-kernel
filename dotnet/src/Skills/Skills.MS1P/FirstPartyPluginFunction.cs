@@ -11,7 +11,7 @@ using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
 using Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models;
 using Microsoft.SemanticKernel.Skills.OpenAPI.Extensions;
-using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models.FluxPluginModel;
+using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models.MicrosoftAiPluginModel;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin;
 

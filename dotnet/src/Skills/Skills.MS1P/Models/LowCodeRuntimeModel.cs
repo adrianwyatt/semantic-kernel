@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models.FluxPluginModel;
+using static Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models.MicrosoftAiPluginModel;
 
 namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models;
 

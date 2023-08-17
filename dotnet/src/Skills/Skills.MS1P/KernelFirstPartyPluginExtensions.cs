@@ -59,6 +59,7 @@ public static class KernelFirstPartyPluginExtensions
             json: json,
             documentOptions: new JsonDocumentOptions() { CommentHandling = JsonCommentHandling.Skip });
 
+        // TODO - remove this parsing and assume we receive what's in the AiPlugins section only.
         JsonArray? optionsOne = rootNode?["options"]?.AsArray();
         JsonNode? optionsTwo = optionsOne?[0]?["options"]; // TODO look for options elements
         JsonArray? aiPlugins = optionsTwo?["AiPlugins"]?.AsArray();
@@ -76,7 +77,7 @@ public static class KernelFirstPartyPluginExtensions
                 continue;
             }
 
-            FluxPluginModel? manifest = JsonSerializer.Deserialize<FluxPluginModel>(aiPlugin.ToJson());
+            MicrosoftAiPluginModel? manifest = JsonSerializer.Deserialize<MicrosoftAiPluginModel>(aiPlugin.ToJson());
             if (manifest == null)
             {
                 throw new InvalidDataException("Unable to deserialize the manifest");
@@ -87,7 +88,7 @@ public static class KernelFirstPartyPluginExtensions
             IRuntimeModel? defaultRuntime = GetDefaultRuntime(runtimes);
 
             // Construct SK function
-            foreach (FluxPluginModel.PluginFunction pluginFunction in manifest.Functions)
+            foreach (MicrosoftAiPluginModel.PluginFunction pluginFunction in manifest.Functions)
             {
                 // Find the runtime type for this function, or use the default if there isn't one set explicitly.
                 IRuntimeModel? functionRuntime = runtimes
@@ -106,7 +107,7 @@ public static class KernelFirstPartyPluginExtensions
                     pluginFunction: pluginFunction,
                     skillName: manifest.Namespace,
                     description: manifest.Description,
-                    orchestrationData: FluxOrchestrationModel.FromFunctionConfig(pluginFunction),
+                    orchestrationData: MicrosoftAiOrchestrationModel.FromFunctionConfig(pluginFunction),
                     runtime: functionRuntime,
                     parameters: parameters,
                     kernel: kernel
@@ -119,7 +120,7 @@ public static class KernelFirstPartyPluginExtensions
         return result;
     }
 
-    private static List<ParameterView> ParseParameters(FluxPluginModel.PluginFunction pluginFunction)
+    private static List<ParameterView> ParseParameters(MicrosoftAiPluginModel.PluginFunction pluginFunction)
     {
         List<ParameterView> parameters = new();
         if (pluginFunction.Parameters != null)
@@ -150,7 +151,7 @@ public static class KernelFirstPartyPluginExtensions
         return defaultRuntime;
     }
 
-    private static List<IRuntimeModel> ParseRuntimes(FluxPluginModel manifest)
+    private static List<IRuntimeModel> ParseRuntimes(MicrosoftAiPluginModel manifest)
     {
         List<IRuntimeModel> runtimes = new();
         foreach (JsonNode runtime in manifest.Runtimes)

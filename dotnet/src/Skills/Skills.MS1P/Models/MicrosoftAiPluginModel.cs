@@ -11,7 +11,7 @@ namespace Microsoft.SemanticKernel.Skills.FirstPartyPlugin.Models;
 /// <summary>
 /// An augmented manifest for an AI plugin to incorporate specifics of how plugins integrate with planning/orchestration.
 /// </summary>
-public record FluxPluginModel
+public record MicrosoftAiPluginModel
 {
     [DataMember(Name = "name")]
     [JsonPropertyName("name")]
