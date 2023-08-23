@@ -26,5 +26,7 @@ public class FirstPartyPluginUnitTests
         context.Variables.Set("state", "reasoning");
         context.Variables.Update("Brainstorm ideas on responsible AI principles.");
         context = await functions.First().Value.InvokeAsync(context);
+
+        Assert.False(context.ErrorOccurred);
     }
 }
