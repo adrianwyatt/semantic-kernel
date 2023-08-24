@@ -13,7 +13,7 @@ namespace SemanticKernel.Skills.UnitTests.FirstPartyPlugin;
 public class FirstPartyPluginUnitTests
 {
     [Fact]
-    public async Task FooTestAsync()
+    public async Task DeserializeValidAIPluginSucceedsAsync()
     {
         IKernel kernel = new KernelBuilder()
             .Build();
