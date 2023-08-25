@@ -51,4 +51,10 @@
     <ProjectReference Include="..\Skills.Web\Skills.Web.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="FirstPartyPlugin\flux_zillow.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
